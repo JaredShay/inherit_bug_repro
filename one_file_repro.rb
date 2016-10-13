@@ -22,7 +22,6 @@ class CreateModels < ActiveRecord::Migration
     create_table :incoming_conversions do |t|
       t.integer :account_id
       t.string :external_id
-      t.string :resource_type
 
       t.timestamps
     end
@@ -30,7 +29,6 @@ class CreateModels < ActiveRecord::Migration
     create_table :resources do |t|
       t.integer :account_id
       t.string :external_id
-      t.string :resource_type
 
       t.timestamps
     end
@@ -42,25 +40,28 @@ CreateModels.change
 
 # define models and populate db
 class IncomingConversion < ActiveRecord::Base
-  has_one :resource, primary_key: :external_id, foreign_key: :external_id, inherit: [:account_id, :resource_type]
+  has_one :resource, primary_key: :external_id, foreign_key: :external_id
+  #inherits_from :resource, :attr => [:account_id]
 end
 
 class Resource < ActiveRecord::Base
-  belongs_to :incoming_conversion, primary_key: :external_id, foreign_key: :external_id, inherit: [:account_id]
+  belongs_to :incoming_conversion, primary_key: :external_id, foreign_key: :external_id
+  #inherits_from :incoming_conversion, :attr => [:account_id]
 end
 
 # Repro issue
 
-ic = IncomingConversion.create!(external_id: '123', account_id: 1, resource_type: 'twitter_status')
-r  = Resource.create!(external_id: '123', account_id: 1, resource_type: 'twitter_status')
+ic = IncomingConversion.create!(external_id: '123', account_id: 1)
+r  = Resource.create!(external_id: '123', account_id: 1)
 
-# This should dirty the cache
-ic.resource
+puts '---------'
+ic.resource.account_id
+puts '---------'
 
-r.destroy!
+ic_2 = IncomingConversion.create!(external_id: '456', account_id: 2)
+r_2  = Resource.create!(external_id: '456', account_id: 2)
 
-ic_2 = IncomingConversion.create!(external_id: '123', account_id: 1, resource_type: 'any_channel')
-r_2  = Resource.create!(external_id: '123', account_id: 1, resource_type: 'any_channel')
+#require 'byebug'; byebug
 
 # This should return r_2, it returns r
-puts ic_2.resource.resource_type
+puts ic_2.resource.account_id.inspect
